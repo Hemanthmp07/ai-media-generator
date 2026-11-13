@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
 import api from "./api.js";
+import { GalleryIcon, TrashIcon, DownloadIcon, ExternalLinkIcon, SearchIcon, PlayIcon, CloseIcon } from "./Icons.jsx";
+import { Modal } from "./Modal.jsx";
+import { Spinner } from "./Loading.jsx";
 
 export default function GalleryHistory() {
   const [history, setHistory] = useState([]);
   const [type, setType]       = useState("all");
+  const [search, setSearch]   = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
+  const [previewItem, setPreviewItem] = useState(null);
 
   useEffect(() => {
     fetchHistory();
@@ -14,323 +19,295 @@ export default function GalleryHistory() {
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/history", { params: { type, limit: 30 } });
-      setHistory(response.data.data.items || []);
-    } catch (err) {
-      setError("Failed to load history");
+      const response = await api.get("/history", { params: { type, limit: 50 } });
+      setHistory(response.data?.data?.items || []);
+    } catch {
+      setError("Failed to load creations history");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, e) => {
+    if (e) e.stopPropagation();
     try {
       await api.delete(`/history/${id}`);
       setHistory(history.filter((item) => item.id !== id));
-    } catch (err) {
-      setError("Failed to delete item");
+      if (previewItem?.id === id) setPreviewItem(null);
+    } catch {
+      setError("Failed to delete creation");
     }
   };
 
   const handleClearAll = async () => {
-    if (!window.confirm("Clear all media history?")) return;
-
+    if (!window.confirm("Are you sure you want to clear your creations history?")) return;
     try {
       await api.post("/history/clear", { type });
       setHistory([]);
-    } catch (err) {
+    } catch {
       setError("Failed to clear history");
     }
   };
 
-  return (
-    <div style={{
-      maxWidth: 920,
-      margin: "20px auto 40px",
-      padding: "30px 32px 36px",
-      borderRadius: 26,
-      background: "linear-gradient(160deg, rgba(8, 14, 32, 0.98), rgba(14, 22, 52, 0.95))",
-      border: "1px solid rgba(244, 114, 182, 0.25)",
-      boxShadow: "0 28px 70px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
-    }}>
+  const filteredHistory = history.filter((item) => {
+    if (!search.trim()) return true;
+    const p = (item.data?.prompt || item.data?.title || "").toLowerCase();
+    return p.includes(search.trim().toLowerCase());
+  });
 
+  return (
+    <div className="vercel-card" style={{ maxWidth: 1040, margin: "0 auto", padding: "28px" }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <span style={{
-            background: "linear-gradient(135deg, #f472b6, #fb7185)",
-            color: "#4c0519",
-            fontWeight: 800,
-            fontSize: 10,
-            padding: "3px 10px",
-            borderRadius: 999,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-          }}>
-            Archive &amp; Creations
-          </span>
-          <h2 style={{
-            margin: "6px 0 0",
-            fontSize: "clamp(1.6rem, 3.2vw, 2.2rem)",
-            fontWeight: 900,
-            background: "linear-gradient(90deg, #f472b6, #c084fc)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}>
-            Media Gallery &amp; History
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span className="vercel-badge">
+              <GalleryIcon size={12} />
+              Creations Vault
+            </span>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>• {history.length} Assets Stored</span>
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", color: "#ffffff", margin: 0 }}>
+            Media Gallery &amp; Archive
           </h2>
         </div>
 
         {history.length > 0 && (
           <button
             onClick={handleClearAll}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 10,
-              border: "1px solid rgba(239, 68, 68, 0.4)",
-              background: "rgba(239, 68, 68, 0.15)",
-              color: "#fca5a5",
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
+            className="vercel-btn-ghost"
+            style={{ fontSize: 12, color: "#f87171" }}
           >
-            🗑️ Clear All
+            <TrashIcon size={13} />
+            <span>Clear Vault</span>
           </button>
         )}
       </div>
 
-      {/* Filter Tabs */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 22 }}>
-        {[
-          { id: "all", label: "All Media", icon: "📁" },
-          { id: "image", label: "Photos & Images", icon: "📸" },
-          { id: "video", label: "Videos", icon: "🎬" },
-        ].map((t) => {
-          const active = type === t.id;
-          return (
+      {/* Filter & Search Bar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
+        {/* Category Tabs */}
+        <div style={{ display: "flex", gap: 4, background: "#080808", padding: 3, borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
+          {[
+            { id: "all", label: "All Media" },
+            { id: "image", label: "Photos & Images" },
+            { id: "video", label: "Videos" },
+            { id: "gif", label: "GIFs" },
+          ].map((t) => (
             <button
               key={t.id}
               onClick={() => setType(t.id)}
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "8px 16px",
-                borderRadius: 12,
-                border: active ? "1px solid #f472b6" : "1px solid rgba(255, 255, 255, 0.08)",
-                background: active ? "rgba(244, 114, 182, 0.2)" : "rgba(255, 255, 255, 0.04)",
-                color: active ? "#ffffff" : "rgba(203, 213, 225, 0.7)",
-                fontSize: 13,
-                fontWeight: 700,
+                fontSize: 12,
+                fontWeight: type === t.id ? 600 : 500,
+                padding: "6px 12px",
+                borderRadius: 6,
+                border: "none",
+                background: type === t.id ? "#262626" : "transparent",
+                color: type === t.id ? "#ffffff" : "var(--text-secondary)",
                 cursor: "pointer",
-                transition: "all 0.18s",
+                transition: "all 0.15s ease",
               }}
             >
-              <span>{t.icon}</span> {t.label}
+              {t.label}
             </button>
-          );
-        })}
+          ))}
+        </div>
+
+        {/* Search Input */}
+        <div style={{ position: "relative", minWidth: 240, flex: 1, maxWidth: 360 }}>
+          <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}>
+            <SearchIcon size={14} />
+          </div>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search prompt keywords…"
+            className="vercel-input"
+            style={{ padding: "8px 12px 8px 32px", fontSize: 12 }}
+          />
+        </div>
       </div>
 
       {error && (
-        <div style={{
-          marginBottom: 16,
-          padding: "12px 16px",
-          borderRadius: 12,
-          background: "rgba(239, 68, 68, 0.12)",
-          border: "1px solid rgba(239, 68, 68, 0.35)",
-          color: "#fca5a5",
-          fontSize: 13,
-        }}>
-          ⚠️ {error}
+        <div style={{ marginBottom: 16, padding: "12px 14px", borderRadius: 8, background: "#180a0a", border: "1px solid #7f1d1d", color: "#fca5a5", fontSize: 13 }}>
+          {error}
         </div>
       )}
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: "40px 0", color: "#f472b6" }}>
-          <div style={{ fontSize: 36, animation: "spin 1.2s linear infinite", display: "inline-block" }}>⏳</div>
-          <div style={{ fontSize: 14, fontWeight: 700, marginTop: 10 }}>Loading archival history…</div>
+        <div style={{ padding: "60px 0", textAlign: "center" }}>
+          <Spinner size="md" text="Loading creations vault…" />
         </div>
-      ) : history.length === 0 ? (
-        <div style={{
-          textAlign: "center",
-          padding: "50px 20px",
-          borderRadius: 18,
-          background: "rgba(255, 255, 255, 0.02)",
-          border: "1px dashed rgba(255, 255, 255, 0.1)",
-        }}>
-          <div style={{ fontSize: 36, opacity: 0.5, marginBottom: 10 }}>🖼️</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "#cbd5e1" }}>No creations saved yet</div>
-          <div style={{ fontSize: 13, color: "rgba(203, 213, 225, 0.5)", marginTop: 4 }}>
-            Photos and videos you search or generate will appear here automatically.
+      ) : filteredHistory.length === 0 ? (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "60px 20px",
+            borderRadius: 12,
+            background: "#080808",
+            border: "1px dashed var(--border-default)",
+          }}
+        >
+          <div style={{ color: "var(--text-muted)", marginBottom: 12 }}>
+            <GalleryIcon size={32} />
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: "#ffffff" }}>
+            {search ? "No matching creations found" : "No media creations yet"}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4, maxWidth: 360, margin: "4px auto 0" }}>
+            {search ? "Try searching for a different keyword or reset the search." : "Photos and videos you synthesize in the studio will automatically appear here."}
           </div>
         </div>
       ) : (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-          gap: 16,
-        }}>
-          {history.map((item) => {
-            const isPhoto = item.type === "image" || Boolean(item.data?.imageUrl);
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+            gap: 16,
+          }}
+        >
+          {filteredHistory.map((item) => {
             const mediaSrc = item.data?.imageUrl || item.data?.videoUrl;
+            const isVideo = item.type === "video" || Boolean(item.data?.videoUrl);
+            const isReal = item.data?.isRealPhoto;
+
             return (
               <div
                 key={item.id}
+                onClick={() => setPreviewItem(item)}
                 style={{
-                  borderRadius: 16,
+                  borderRadius: 10,
                   overflow: "hidden",
-                  background: "rgba(12, 19, 44, 0.75)",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  background: "#0a0a0a",
+                  border: "1px solid var(--border-default)",
+                  cursor: "pointer",
                   display: "flex",
                   flexDirection: "column",
-                  transition: "transform 0.2s ease, border-color 0.2s ease",
+                  transition: "border-color 0.18s ease, transform 0.18s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#3f3f46";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border-default)";
+                  e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
-                {/* Media Preview */}
-                <div style={{ position: "relative", width: "100%", height: 160, background: "#050814" }}>
-                  {item.data?.videoUrl && (item.data.videoUrl.startsWith("blob:") || item.data.videoUrl.startsWith("data:")) ? (
-                    <video
-                      src={item.data.videoUrl}
-                      muted
-                      playsInline
-                      loop
-                      autoPlay
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  ) : item.data?.imageUrl ? (
-                    <div style={{ position: "relative", width: "100%", height: "100%" }}>
-                      <img
-                        src={item.data.imageUrl}
-                        alt={item.data?.prompt}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      />
-                      {item.type === "video" && (
-                        <div style={{
-                          position: "absolute",
-                          inset: 0,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          background: "rgba(0,0,0,0.25)",
-                        }}>
-                          <div style={{
-                            width: 38,
-                            height: 38,
-                            borderRadius: "50%",
-                            background: "rgba(6, 182, 212, 0.85)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: 16,
-                            color: "#03172e",
-                            paddingLeft: 2,
-                            boxShadow: "0 0 15px rgba(6, 182, 212, 0.6)",
-                          }}>
-                            ▶
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : item.data?.videoUrl ? (
-                    <video
-                      src={item.data.videoUrl}
-                      muted
-                      playsInline
+                {/* Media Preview Box */}
+                <div style={{ position: "relative", width: "100%", aspectRatio: "16/10", background: "#000000" }}>
+                  {mediaSrc ? (
+                    <img
+                      src={mediaSrc}
+                      alt={item.data?.prompt || "Creation"}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   ) : (
-                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
-                      🎬 Video Creation
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: 12 }}>
+                      Media Asset
                     </div>
                   )}
 
-                  {/* Badge */}
-                  <div style={{
-                    position: "absolute",
-                    top: 8,
-                    left: 8,
-                    padding: "3px 8px",
-                    borderRadius: 999,
-                    fontSize: 10,
-                    fontWeight: 800,
-                    background: item.data?.isRealPhoto ? "rgba(6, 78, 59, 0.85)" : "rgba(0, 0, 0, 0.7)",
-                    color: item.data?.isRealPhoto ? "#34d399" : "#e2e8f0",
-                    border: item.data?.isRealPhoto ? "1px solid #10b981" : "1px solid rgba(255,255,255,0.15)",
-                    backdropFilter: "blur(6px)",
-                  }}>
-                    {item.data?.isRealPhoto ? "📸 Real Photo" : item.type === "video" ? "🎬 Video" : "🎨 AI Art"}
+                  {/* Badges */}
+                  <div style={{ position: "absolute", top: 8, left: 8, padding: "2px 7px", borderRadius: 4, background: "rgba(0,0,0,0.85)", border: "1px solid #333", fontSize: 10, color: "#fff", fontWeight: 600 }}>
+                    {isReal ? "Archive Photo" : isVideo ? "Video" : "AI Image"}
                   </div>
+
+                  {isVideo && (
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.25)" }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#ffffff", color: "#000", display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: 2 }}>
+                        <PlayIcon size={14} />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Info & Actions */}
-                <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", flex: 1 }}>
-                  <div style={{ fontSize: 11, color: "rgba(203, 213, 225, 0.5)", marginBottom: 4 }}>
+                {/* Card Meta */}
+                <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", flex: 1 }}>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 4 }}>
                     {new Date(item.timestamp).toLocaleDateString()}
                   </div>
-                  <div style={{
-                    fontSize: 13,
-                    color: "#f1f5f9",
-                    fontWeight: 600,
-                    lineHeight: 1.4,
-                    marginBottom: 12,
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                    flex: 1,
-                  }}>
-                    {item.data?.prompt || "Media Creation"}
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#ffffff",
+                      lineHeight: 1.4,
+                      marginBottom: 12,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                      flex: 1,
+                    }}
+                  >
+                    {item.data?.prompt || item.data?.title || "Generative Creation"}
                   </div>
 
-                  <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
-                    {mediaSrc && (
-                      <a
-                        href={mediaSrc}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          flex: 1,
-                          padding: "7px 10px",
-                          borderRadius: 8,
-                          background: "rgba(56, 189, 248, 0.15)",
-                          border: "1px solid rgba(56, 189, 248, 0.3)",
-                          color: "#38bdf8",
-                          fontSize: 11,
-                          fontWeight: 700,
-                          textAlign: "center",
-                          textDecoration: "none",
-                        }}
-                      >
-                        Open ↗
-                      </a>
-                    )}
+                  {/* Actions */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: 8, borderTop: "1px solid var(--border-subtle)" }}>
+                    <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 500 }}>
+                      Preview ↗
+                    </span>
                     <button
-                      onClick={() => handleDelete(item.id)}
-                      style={{
-                        padding: "7px 12px",
-                        borderRadius: 8,
-                        background: "rgba(239, 68, 68, 0.12)",
-                        border: "1px solid rgba(239, 68, 68, 0.25)",
-                        color: "#fca5a5",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                      }}
+                      onClick={(e) => handleDelete(item.id, e)}
+                      className="vercel-btn-ghost"
+                      style={{ padding: 4, color: "var(--text-muted)" }}
+                      title="Delete creation"
                     >
-                      Delete
+                      <TrashIcon size={13} />
                     </button>
                   </div>
                 </div>
-
               </div>
             );
           })}
         </div>
       )}
 
+      {/* Full Preview Modal */}
+      {previewItem && (
+        <Modal
+          isOpen={Boolean(previewItem)}
+          title={previewItem.data?.isRealPhoto ? "Archival Photograph Preview" : previewItem.type === "video" ? "Video Asset Preview" : "Media Preview"}
+          onClose={() => setPreviewItem(null)}
+          maxWidth={760}
+          actions={[
+            {
+              label: "Open Source ↗",
+              onClick: () => window.open(previewItem.data?.imageUrl || previewItem.data?.videoUrl, "_blank"),
+            },
+            {
+              label: "Delete Asset",
+              onClick: () => handleDelete(previewItem.id),
+            },
+          ]}
+        >
+          <div>
+            <div style={{ borderRadius: 10, overflow: "hidden", background: "#000", border: "1px solid var(--border-default)", marginBottom: 16 }}>
+              {previewItem.data?.imageUrl && (
+                <img
+                  src={previewItem.data.imageUrl}
+                  alt={previewItem.data?.prompt}
+                  style={{ width: "100%", maxHeight: 460, objectFit: "contain", display: "block" }}
+                />
+              )}
+            </div>
+
+            <div style={{ fontSize: 14, color: "#ffffff", fontWeight: 600, marginBottom: 8 }}>
+              "{previewItem.data?.prompt || previewItem.data?.title}"
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 12, color: "var(--text-secondary)", padding: 12, background: "#0a0a0a", borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
+              <div>Type: <strong style={{ color: "#fff" }}>{previewItem.type || "Image"}</strong></div>
+              <div>Created: <strong style={{ color: "#fff" }}>{new Date(previewItem.timestamp).toLocaleString()}</strong></div>
+              {previewItem.data?.provider && <div>Provider: <strong style={{ color: "#fff" }}>{previewItem.data.provider}</strong></div>}
+              {previewItem.data?.size && <div>Resolution: <strong style={{ color: "#fff" }}>{previewItem.data.size}</strong></div>}
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

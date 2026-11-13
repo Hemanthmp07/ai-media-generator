@@ -1,31 +1,72 @@
-// Loading spinner component
+import React from "react";
+
 export const Spinner = ({ size = "md", text = "" }) => {
-  const sizeClass = {
-    sm: "w-4 h-4",
-    md: "w-8 h-8",
-    lg: "w-12 h-12",
-  }[size];
+  const sizePx = {
+    sm: 16,
+    md: 24,
+    lg: 36,
+  }[size] || 24;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-3">
-      <div className={`${sizeClass} border-4 border-gray-700 border-t-purple-500 rounded-full animate-spin`} />
-      {text && <p className="text-sm text-gray-400">{text}</p>}
+    <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
+      <svg
+        width={sizePx}
+        height={sizePx}
+        viewBox="0 0 24 24"
+        fill="none"
+        style={{ animation: "spinSlow 0.9s linear infinite" }}
+      >
+        <circle cx="12" cy="12" r="10" stroke="#262626" strokeWidth="2.5" />
+        <path
+          d="M12 2a10 10 0 0 1 10 10"
+          stroke="#ffffff"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+      </svg>
+      {text && (
+        <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>
+          {text}
+        </span>
+      )}
     </div>
   );
 };
 
-// Progress bar component
-export const ProgressBar = ({ progress, label }) => {
+export const ProgressBar = ({ progress = 0, label = "" }) => {
+  const p = Math.max(0, Math.min(100, progress));
   return (
-    <div className="w-full">
-      {label && <p className="text-sm text-gray-400 mb-2">{label}</p>}
-      <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+    <div style={{ width: "100%" }}>
+      {label && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, fontSize: 12 }}>
+          <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>{label}</span>
+          <span style={{ color: "var(--text-muted)", fontFamily: "monospace" }}>{Math.round(p)}%</span>
+        </div>
+      )}
+      <div style={{ width: "100%", height: 4, background: "#1c1c1c", borderRadius: 9999, overflow: "hidden" }}>
         <div
-          className="bg-gradient-to-r from-purple-500 to-cyan-500 h-full transition-all duration-300"
-          style={{ width: `${progress}%` }}
+          style={{
+            width: `${p}%`,
+            height: "100%",
+            background: "#ffffff",
+            borderRadius: 9999,
+            transition: "width 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
         />
       </div>
-      <p className="text-xs text-gray-500 mt-1">{progress}%</p>
     </div>
   );
 };
+
+export const Skeleton = ({ height = 120, width = "100%", borderRadius = 10, style = {} }) => (
+  <div
+    className="shimmer-box"
+    style={{
+      height,
+      width,
+      borderRadius,
+      border: "1px solid var(--border-subtle)",
+      ...style,
+    }}
+  />
+);

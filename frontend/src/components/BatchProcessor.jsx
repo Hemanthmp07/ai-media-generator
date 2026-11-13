@@ -1,5 +1,7 @@
 import { useState } from "react";
 import api from "./api.js";
+import { LayersIcon, ZapIcon, ExternalLinkIcon } from "./Icons.jsx";
+import { ProgressBar } from "./Loading.jsx";
 
 export default function BatchProcessor() {
   const [prompts, setPrompts] = useState("");
@@ -22,7 +24,7 @@ export default function BatchProcessor() {
     }
 
     if (promptList.length > 10) {
-      setError("Maximum 10 prompts allowed at once");
+      setError("Maximum 10 prompts allowed per batch");
       return;
     }
 
@@ -42,177 +44,109 @@ export default function BatchProcessor() {
 
       clearInterval(interval);
       setProgress(100);
-      setResults(response.data.data.results || []);
+      setResults(response.data?.data?.results || []);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to process batch");
+      setError(err.response?.data?.error || "Failed to process batch queue");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{
-      maxWidth: 860,
-      margin: "20px auto 40px",
-      padding: "30px 32px 36px",
-      borderRadius: 26,
-      background: "linear-gradient(160deg, rgba(8, 14, 32, 0.98), rgba(14, 22, 52, 0.95))",
-      border: "1px solid rgba(52, 211, 153, 0.22)",
-      boxShadow: "0 28px 70px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
-    }}>
-
+    <div className="vercel-card" style={{ maxWidth: 860, margin: "0 auto", padding: "28px" }}>
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-          <span style={{
-            background: "linear-gradient(135deg, #10b981, #06b6d4)",
-            color: "#022c22",
-            fontWeight: 800,
-            fontSize: 10,
-            padding: "3px 10px",
-            borderRadius: 999,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-          }}>
-            Multi-Generation Engine
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <span className="vercel-badge">
+            <LayersIcon size={12} />
+            Concurrent Pipeline
           </span>
-          <span style={{ fontSize: 12, color: "#34d399", fontWeight: 600 }}>
-            • Up to 10 Prompts Concurrently
-          </span>
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>• Up to 10 Parallel Requests</span>
         </div>
-
-        <h2 style={{
-          margin: 0,
-          fontSize: "clamp(1.6rem, 3.2vw, 2.2rem)",
-          fontWeight: 900,
-          background: "linear-gradient(90deg, #34d399, #38bdf8)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
-        }}>
+        <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", color: "#ffffff", margin: "4px 0" }}>
           Batch Media Processor
         </h2>
-        <p style={{ margin: "6px 0 0", fontSize: 13, color: "rgba(203, 213, 225, 0.75)" }}>
-          Queue multiple prompts simultaneously to generate a full collection of images in one click.
+        <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>
+          Queue multiple prompts concurrently to generate an entire series of images or asset variations in a single click.
         </p>
       </div>
 
-      {/* Textarea */}
-      <div style={{ position: "relative", marginBottom: 16 }}>
+      {/* Input */}
+      <div style={{ position: "relative", marginBottom: 14 }}>
         <textarea
           value={prompts}
           onChange={(e) => { setPrompts(e.target.value); setError(""); }}
           rows={6}
           placeholder={"Golden sunset over snowy pine forest\nCandid street photograph of Tokyo in rain\nMajestic Bengal tiger wading in forest river\nFuturistic skyscraper with hanging gardens"}
           disabled={loading}
-          style={{
-            width: "100%",
-            boxSizing: "border-box",
-            padding: "16px 18px",
-            borderRadius: 18,
-            resize: "vertical",
-            background: "rgba(12, 19, 44, 0.85)",
-            border: "1px solid rgba(52, 211, 153, 0.35)",
-            color: "#f1f5f9",
-            fontSize: 14,
-            lineHeight: 1.7,
-            outline: "none",
-            fontFamily: "inherit",
-            boxShadow: "inset 0 2px 14px rgba(0, 0, 0, 0.4)",
-          }}
+          className="vercel-textarea"
+          style={{ padding: "14px 16px", fontSize: 13, lineHeight: 1.6 }}
         />
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 12 }}>
-          <span style={{ color: "#34d399", fontWeight: 700 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, fontSize: 12 }}>
+          <span style={{ color: promptCount > 0 ? "#ffffff" : "var(--text-muted)", fontWeight: 600 }}>
             {promptCount} of 10 prompts queued
           </span>
-          <span style={{ color: "rgba(203, 213, 225, 0.5)" }}>
-            Tip: Press Enter for a new line per prompt
+          <span style={{ color: "var(--text-muted)" }}>
+            One prompt per line
           </span>
         </div>
       </div>
 
-      {/* Error */}
       {error && (
-        <div style={{
-          marginBottom: 16,
-          padding: "12px 16px",
-          borderRadius: 12,
-          background: "rgba(239, 68, 68, 0.12)",
-          border: "1px solid rgba(239, 68, 68, 0.35)",
-          color: "#fca5a5",
-          fontSize: 13,
-        }}>
-          ⚠️ {error}
+        <div style={{ marginBottom: 16, padding: "12px 14px", borderRadius: 8, background: "#180a0a", border: "1px solid #7f1d1d", color: "#fca5a5", fontSize: 13 }}>
+          {error}
         </div>
       )}
 
-      {/* Progress */}
       {loading && (
         <div style={{ marginBottom: 20 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#34d399", fontWeight: 700, marginBottom: 6 }}>
-            <span>Processing batch queue…</span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <div style={{ width: "100%", height: 6, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-            <div style={{ width: `${progress}%`, height: "100%", background: "linear-gradient(90deg, #10b981, #38bdf8)", transition: "width 0.4s ease" }} />
-          </div>
+          <ProgressBar progress={progress} label="Generating concurrent batch media…" />
         </div>
       )}
 
-      {/* Action Button */}
       <button
         onClick={handleProcess}
         disabled={loading || promptCount === 0}
-        style={{
-          width: "100%",
-          padding: "16px 24px",
-          borderRadius: 18,
-          border: "none",
-          cursor: loading || promptCount === 0 ? "not-allowed" : "pointer",
-          fontSize: 15,
-          fontWeight: 800,
-          background: loading || promptCount === 0
-            ? "rgba(100, 116, 139, 0.3)"
-            : "linear-gradient(135deg, #10b981, #06b6d4)",
-          color: "#022c22",
-          boxShadow: loading || promptCount === 0 ? "none" : "0 8px 30px rgba(16, 185, 129, 0.35)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 10,
-          transition: "all 0.2s",
-        }}
+        className="vercel-btn-primary"
+        style={{ width: "100%", padding: "12px 20px", fontSize: 14 }}
       >
-        {loading ? "⚡ Generating Media Batch…" : `⚡ Process ${promptCount > 0 ? `${promptCount} Prompts` : "Batch"}`}
+        {loading ? "Processing Batch Pipeline…" : `Process ${promptCount > 0 ? `${promptCount} Prompts` : "Batch"}`}
       </button>
 
       {/* Results */}
       {results.length > 0 && (
         <div style={{ marginTop: 28 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", marginBottom: 14 }}>
-            Batch Results ({results.length} Generated)
-          </h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: "#ffffff", margin: 0 }}>
+              Batch Results ({results.length} Generated)
+            </h3>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14 }}>
             {results.map((item, idx) => (
               <div
                 key={idx}
                 style={{
-                  borderRadius: 14,
+                  borderRadius: 10,
                   overflow: "hidden",
-                  background: "rgba(12, 19, 44, 0.7)",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                  padding: 10,
+                  background: "#080808",
+                  border: "1px solid var(--border-default)",
+                  padding: 12,
+                  display: "flex",
+                  flexDirection: "column",
                 }}
               >
                 {item.imageUrl && (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.prompt}
-                    style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 10, marginBottom: 8 }}
-                  />
+                  <div style={{ aspectRatio: "16/10", width: "100%", borderRadius: 6, overflow: "hidden", background: "#000", marginBottom: 10 }}>
+                    <img
+                      src={item.imageUrl}
+                      alt={item.prompt}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  </div>
                 )}
-                <div style={{ fontSize: 11, color: "rgba(203, 213, 225, 0.5)", fontWeight: 700 }}>#{idx + 1}</div>
-                <div style={{ fontSize: 12, color: "#e2e8f0", margin: "4px 0 8px", lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "monospace" }}>#{idx + 1}</div>
+                <div style={{ fontSize: 12, color: "#e4e4e7", margin: "4px 0 10px", lineHeight: 1.4, flex: 1 }}>
                   {item.prompt}
                 </div>
                 {item.imageUrl && (
@@ -220,9 +154,11 @@ export default function BatchProcessor() {
                     href={item.imageUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ fontSize: 11, color: "#38bdf8", textDecoration: "none", fontWeight: 700 }}
+                    className="vercel-btn-secondary"
+                    style={{ fontSize: 11, padding: "5px 8px", width: "100%" }}
                   >
-                    Open Image ↗
+                    <ExternalLinkIcon size={12} />
+                    <span>View Asset</span>
                   </a>
                 )}
               </div>
@@ -230,7 +166,6 @@ export default function BatchProcessor() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
