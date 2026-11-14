@@ -1,5 +1,11 @@
 const { ApiError, asyncHandler } = require("../middleware/errorHandler");
-const videoService = require("../services/videoService");
+
+let videoService;
+try {
+  videoService = require("../services/videoService");
+} catch (e) {
+  videoService = require("../services/videoservice");
+}
 
 exports.generateVideo = asyncHandler(async (req, res) => {
   const { prompt, duration = 30, style = "cinematic", motion = "aerial", ratio = "16:9" } = req.validated || req.body;

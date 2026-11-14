@@ -1,4 +1,12 @@
 {
+  "name": "ai-media-generator",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "npm install --prefix backend",
+    "start": "node backend/server.js",
+    "build:backend": "npm install --prefix backend",
+    "start:backend": "node backend/server.js"
+  },
   "dependencies": {
     "@vitejs/plugin-react": "^5.1.1",
     "framer-motion": "^12.23.24"

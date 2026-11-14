@@ -15,7 +15,38 @@
 
 ### Backend Deployment Options
 
-#### Option 1: Heroku
+#### Option 1: Render (Recommended)
+
+Render provides free cloud hosting for Node.js web services with automatic SSL and zero-downtime deploys.
+
+##### Option A: Deploy with Root Directory Set to `backend` (Fastest)
+1. Go to [Render Dashboard](https://dashboard.render.com/) and click **New +** -> **Web Service**.
+2. Connect your GitHub repository.
+3. Configure settings:
+   - **Name**: `ai-media-generator-backend`
+   - **Language / Runtime**: `Node`
+   - **Root Directory**: `backend`
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start` (or `node server.js`)
+   - **Instance Type**: `Free`
+4. Add **Environment Variables**:
+   - `NODE_ENV`: `production`
+   - `CORS_ORIGIN`: `*` (or your frontend URL, e.g. `https://your-app.vercel.app`)
+   - `OPENAI_API_KEY`: *(optional, your OpenAI API key)*
+5. Set **Health Check Path** (under Advanced):
+   - `/health`
+6. Click **Deploy Web Service**.
+
+##### Option B: Deploy from Repository Root (Without changing Root Directory)
+- **Root Directory**: *(leave blank)*
+- **Build Command**: `npm run build:backend` *(or `cd backend && npm install`)*
+- **Start Command**: `npm run start:backend` *(or `cd backend && npm start`)*
+
+##### Option C: One-Click Render Blueprint (`render.yaml`)
+1. On Render Dashboard, click **New +** -> **Blueprint**.
+2. Select your repository. Render will automatically read `render.yaml` and configure the service.
+
+#### Option 2: Heroku
 
 ```bash
 # Install Heroku CLI

@@ -1,9 +1,17 @@
-import axios from "axios";
-import { OPENAI_API_KEY } from "../config/apiConfig.js";
+const axios = require("axios");
 
-export const generateImageService = async (prompt) => {
+let OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+try {
+  const config = require("../config/ApiConfig");
+  if (config && config.OPENAI_API_KEY) {
+    OPENAI_API_KEY = config.OPENAI_API_KEY;
+  }
+} catch (e) {
+  // Ignore fallback error
+}
+
+const generateImageService = async (prompt) => {
   try {
-    // API KEY will be inserted later
     const response = await axios.post(
       "https://api.openai.com/v1/images/generations",
       {
@@ -23,4 +31,8 @@ export const generateImageService = async (prompt) => {
     console.error("Image Service Error:", err.response?.data || err);
     throw new Error("Failed to generate image");
   }
+};
+
+module.exports = {
+  generateImageService,
 };
